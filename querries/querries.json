@@ -1,0 +1,91 @@
+{
+  "factual": [
+    "What does RAG stand for?",
+    "Who introduced Retrieval-Augmented Generation (RAG) and in what year?",
+    "What are the two main categories used to classify RAG applications in the first paper?",
+    "Which base model is used in VLM-R1 experiments?",
+    "What is the knowledge cutoff date mentioned in the first paper?",
+    "What does GRPO stand for?",
+    "What are the two visual understanding tasks selected for VLM-R1 experiments?",
+    "What is the IoU metric used for in the REC task?",
+    "How many publications on RAG applications were found in 2023 according to the first paper?",
+    "What is the performance of Qwen2.5-VL-3B on Refcocoval according to Table 1 in the second paper?",
+    "What are the three key features of VLM-R1 framework mentioned?",
+    "What datasets are used for training the REC task in VLM-R1?",
+    "What is the odLength reward designed to address?",
+    "What is the temperature parameter set to during REC training with RL?",
+    "What is LISA-Grounding used for in the VLM-R1 experiments?"
+  ],
+  "section_based": [
+    "What methodology is described in Section 2 of the first paper?",
+    "What are the main findings discussed in the Discussion section of the second paper?",
+    "What is covered in the Related Work section of the VLM-R1 paper?",
+    "According to the Introduction of the first paper, what challenges do LLMs face with domain-specific queries?",
+    "What applications are listed under the Medical/Biomedical category in the first paper?",
+    "What does Section 3 of the VLM-R1 paper describe?",
+    "What experiments are presented in Section 5 of the second paper?",
+    "What conclusions are drawn in Section 5 of the first paper?",
+    "What is discussed in the Background section of the first paper?",
+    "What reward designs are introduced in Section 4 of the VLM-R1 paper?"
+  ],
+  "explanation": [
+    "Why was RAG introduced as a solution for LLMs?",
+    "Why did the authors choose Google Scholar instead of Scopus or IEEE for collecting research publications?",
+    "Why are REC and OVD selected as representative tasks in VLM-R1?",
+    "Why does the native mAP reward lead to reward hacking in OVD tasks?",
+    "Why is the odLength reward penalty factor important for OVD performance?",
+    "Why does the VLM Module exist in the VLM-R1 framework?",
+    "Why do VLMs often underperform compared to specialized vision models on REC and OVD tasks?",
+    "Why is LISA-Grounding considered a challenging out-of-domain evaluation dataset?",
+    "Why does RL show better generalization than SFT according to the second paper?",
+    "Why is careful training data selection important for complex tasks like OVD?"
+  ],
+  "comparison": [
+    "What is the difference between task-based and discipline-based classification of RAG applications?",
+    "How does RAG differ from traditional LLM approaches according to the first paper?",
+    "What is the performance difference between SFT and RL models on LISA-Grounding?",
+    "How do REC and OVD tasks differ in complexity?",
+    "Compare the performance of Qwen2.5-VL-3B and Grounding DINO on REC and OVD tasks.",
+    "What is the difference between accuracy reward and format reward in VLM-R1?",
+    "How does the RL model trained on D3 compare to one trained on COCO?",
+    "What are the differences between GRPO and PPO algorithms?",
+    "Compare the performance improvements of RL across 3B, 7B, and 32B model sizes.",
+    "How does reward hacking manifest differently with native mAP versus odLength reward?"
+  ],
+  "multi_chunk": [
+    "How does the VLM-R1 framework address the challenges identified in the introduction regarding VLM performance on visual understanding tasks?",
+    "What is the relationship between reward engineering and the emergence of the 'OD aha moment'?",
+    "How do the experimental results on REC and OVD tasks support the conclusion that RL generalizes better than SFT?",
+    "What are the key steps in the VLM-R1 framework pipeline from data preparation to model optimization?",
+    "How does the choice of training data quality impact both REC and OVD task performance based on the ablation studies?",
+    "What evidence supports the claim that more complex tasks like OVD require additional optimization compared to simpler tasks like REC?",
+    "How does the VLM Module enable support for various VLM architectures in the training process?",
+    "What is the connection between the limitations discussed in the first paper and the contributions of VLM-R1?",
+    "How do the results across different model sizes relate to the discussion about RL effects on reasoning-intensive tasks?",
+    "What role does the GRPO algorithm play in achieving the main experimental results reported in the paper?"
+  ],
+  "negative": [
+    "What is the performance of VLM-R1 on image captioning tasks?",
+    "How does RAG perform on speech recognition tasks according to the papers?",
+    "What transformer architecture modifications are proposed in VLM-R1?",
+    "What is the computational cost comparison between RAG and fine-tuning approaches?",
+    "How does VLM-R1 handle video understanding tasks?",
+    "What ethical considerations are discussed for deploying RAG in healthcare settings?",
+    "What is the latency of RAG systems in production environments?",
+    "How does the paper evaluate RAG on machine translation tasks?",
+    "What privacy-preserving techniques are used in the VLM-R1 framework?",
+    "What is the human evaluation score for VLM-R1 generated responses?"
+  ],
+  "ambiguous": [
+    "What are the main results?",
+    "How does the model perform?",
+    "What datasets are used?",
+    "What is the performance improvement?",
+    "What are the limitations?",
+    "How does it work?",
+    "What is the contribution?",
+    "Which method is better?",
+    "What are the applications?",
+    "What is the framework about?"
+  ]
+}

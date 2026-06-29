@@ -1,9 +1,9 @@
-from vectorstores.retriever import retrieve_chunks
+from rag.retriever import retrieve
 from rag.prompts import RAG_PROMPT
 from rag.llm_client import call_llm
 
 def run_rag(query: str, top_k: int = 5):
-    chunks = retrieve_chunks(query, top_k)
+    chunks = retrieve(query, top_k)
 
     if not chunks:
         return "No relevant information found."

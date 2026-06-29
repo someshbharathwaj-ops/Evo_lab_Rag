@@ -2,3 +2,7 @@ PyMuPDF
 tiktoken
 sentence-transformers==3.0.1
 python-dotenv==1.0.1
+psycopg[binary]
+pgvector
+openai
+

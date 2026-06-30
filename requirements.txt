@@ -1,8 +1,6 @@
-PyMuPDF
-tiktoken
+PyMuPDF>=1.24
+tiktoken>=0.7
 sentence-transformers==3.0.1
-python-dotenv==1.0.1
-psycopg[binary]
-pgvector
-openai
-
+python-dotenv>=1.0.1
+psycopg[binary]>=3.1
+openai>=1.30

@@ -1,52 +1,51 @@
-import time
+"""Local Ollama client using its OpenAI-compatible endpoint."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+
 from openai import OpenAI
-from config import LLM_MODEL, MAX_TOKENS, TEMPERATURE, OPENROUTER_API_KEY
+
+from config import (
+    LLM_MODEL,
+    LLM_TIMEOUT,
+    MAX_TOKENS,
+    OLLAMA_BASE_URL,
+    OLLAMA_REASONING_EFFORT,
+    TEMPERATURE,
+)
 
 
-_client = None
-
-MAX_RETRIES = 5
-RETRY_BASE_DELAY = 30  # seconds (OpenRouter free tier uses ~29s cooldowns)
-
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=OPENROUTER_API_KEY,
-        )
-    return _client
+@lru_cache(maxsize=1)
+def _get_client() -> OpenAI:
+    return OpenAI(
+        base_url=OLLAMA_BASE_URL,
+        api_key="ollama",
+        timeout=LLM_TIMEOUT,
+        max_retries=1,
+    )
 
 
 def call_llm(prompt: str) -> str:
-    """
-    Calls OpenRouter API (OpenAI-compatible) with the configured model.
-    Retries automatically on 429 rate-limit errors.
-    Always returns a string.
-    """
-    client = _get_client()
+    """Generate an answer with local Qwen3, raising actionable failures."""
+    if not prompt or not prompt.strip():
+        raise ValueError("Prompt cannot be empty")
+    try:
+        response = _get_client().chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            reasoning_effort=OLLAMA_REASONING_EFFORT,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Ollama request failed at {OLLAMA_BASE_URL} using model "
+            f"'{LLM_MODEL}': {exc}. Confirm Ollama is running and execute "
+            f"'ollama pull {LLM_MODEL}'."
+        ) from exc
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            response = client.chat.completions.create(
-                model=LLM_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=MAX_TOKENS,
-                temperature=TEMPERATURE,
-            )
-            return response.choices[0].message.content.strip()
-
-        except Exception as e:
-            err = str(e)
-            if "429" in err and attempt < MAX_RETRIES:
-                wait = RETRY_BASE_DELAY
-                print(f"    [LLM] Rate limited (attempt {attempt}/{MAX_RETRIES}), retrying in {wait}s...")
-                time.sleep(wait)
-                continue
-            return f"LLM error: {err}"
+    content = response.choices[0].message.content
+    if not content or not content.strip():
+        raise RuntimeError(f"Ollama model '{LLM_MODEL}' returned an empty response")
+    return content.strip()

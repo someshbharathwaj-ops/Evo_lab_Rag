@@ -1,11 +1,18 @@
-# RAG/prompts.py
+"""Prompt and context construction for grounded answer generation."""
 
-RAG_PROMPT = """
-You are a helpful assistant.
+from __future__ import annotations
 
-Answer the question using ONLY the information provided in the context below.
-If the answer is not present in the context, say:
-"I could not find the answer in the provided documents."
+from pathlib import Path
+from typing import Any, Iterable
+
+from config import MAX_CONTEXT_CHARS
+
+
+RAG_PROMPT = """You are a helpful AI assistant.
+
+Use ONLY the supplied context to answer the question.
+If the answer is unavailable in the context, say that you do not know.
+Do not invent facts or use outside knowledge.
 
 Context:
 {context}
@@ -13,5 +20,47 @@ Context:
 Question:
 {question}
 
-Answer:
-"""
+Answer:"""
+
+
+def build_context(
+    chunks: Iterable[dict[str, Any]],
+    max_chars: int = MAX_CONTEXT_CHARS,
+) -> str:
+    """Deduplicate matches and format a bounded, source-labelled context."""
+    sections: list[str] = []
+    seen_text: set[str] = set()
+    current_length = 0
+
+    for chunk in chunks:
+        text = str(chunk.get("text", "")).strip()
+        normalized = " ".join(text.split()).casefold()
+        if not text or normalized in seen_text:
+            continue
+        seen_text.add(normalized)
+
+        metadata = chunk.get("metadata") or {}
+        source = metadata.get("source") or chunk.get("source") or "unknown"
+        page = metadata.get("page") or chunk.get("page")
+        label = Path(str(source)).name
+        if page is not None:
+            label += f", page {page}"
+        section = f"[Source: {label}]\n{text}"
+
+        remaining = max_chars - current_length
+        if remaining <= 0:
+            break
+        if len(section) > remaining:
+            section = section[:remaining].rstrip()
+        sections.append(section)
+        current_length += len(section) + 2
+
+    return "\n\n".join(sections)
+
+
+def build_rag_prompt(question: str, context: str) -> str:
+    if not question.strip():
+        raise ValueError("Question cannot be empty")
+    if not context.strip():
+        raise ValueError("Context cannot be empty")
+    return RAG_PROMPT.format(context=context, question=question.strip())

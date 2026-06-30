@@ -1,5 +1,5 @@
 import psycopg
-from Evo_lab_Rag.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, EMBEDDING_DIMENSION
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, EMBEDDING_DIMENSION
 
 _conn = None
 

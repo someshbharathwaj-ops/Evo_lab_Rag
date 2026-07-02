@@ -24,12 +24,15 @@ def _get_float(name: str, default: float) -> float:
         raise ValueError(f"{name} must be a number") from exc
 
 
-# Local Ollama exposes an OpenAI-compatible API. No external API key is used.
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen3")
+# Google Gemini API Settings
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 MAX_TOKENS = _get_int("MAX_TOKENS", 800)
 TEMPERATURE = _get_float("TEMPERATURE", 0.0)
 LLM_TIMEOUT = _get_float("LLM_TIMEOUT", 120.0)
+
+# Legacy Ollama settings kept for compatibility
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
 OLLAMA_REASONING_EFFORT = os.getenv("OLLAMA_REASONING_EFFORT", "none")
 
 # Keep the project's existing embedding model. Its dimension is detected at runtime.

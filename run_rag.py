@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from config import LLM_MODEL, OLLAMA_BASE_URL
+from config import LLM_MODEL
 from ingestion.vectorstore.pgvector_store import count_chunks
 from rag.rag_pipeline import run_rag
 
@@ -11,7 +11,7 @@ def print_header() -> None:
     print("===================================")
     print("Local RAG Assistant")
     print("===================================")
-    print(f"Ollama: {OLLAMA_BASE_URL} | model: {LLM_MODEL}")
+    print(f"Model: {LLM_MODEL}")
     print("Type 'exit' to quit.\n")
 
 

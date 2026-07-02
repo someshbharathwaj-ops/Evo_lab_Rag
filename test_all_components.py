@@ -101,20 +101,17 @@ class RagTests(unittest.TestCase):
             self.assertEqual(pipeline.run_rag("question"), pipeline.NO_CONTEXT_ANSWER)
 
 
-class OllamaClientTests(unittest.TestCase):
-    def test_client_uses_local_ollama_credentials(self):
-        from config import OLLAMA_BASE_URL
+class GeminiClientTests(unittest.TestCase):
+    def test_client_uses_gemini_credentials(self):
+        from config import GEMINI_API_KEY
 
         llm_client = importlib.import_module("rag.llm_client")
         llm_client._get_client.cache_clear()
-        with patch.object(llm_client, "OpenAI") as openai:
-            openai.return_value = MagicMock()
+        with patch.object(llm_client, "genai") as mock_genai:
+            mock_genai.Client.return_value = MagicMock()
             llm_client._get_client()
-            openai.assert_called_once_with(
-                base_url=OLLAMA_BASE_URL,
-                api_key="ollama",
-                timeout=llm_client.LLM_TIMEOUT,
-                max_retries=1,
+            mock_genai.Client.assert_called_once_with(
+                api_key=GEMINI_API_KEY or None
             )
 
 

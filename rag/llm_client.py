@@ -1,66 +1,44 @@
-"""Local Ollama client using its OpenAI-compatible endpoint."""
+"""Google Gemini client using the official google-genai SDK."""
 
 from __future__ import annotations
 
 from functools import lru_cache
-
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from config import (
+    GEMINI_API_KEY,
     LLM_MODEL,
-    LLM_TIMEOUT,
     MAX_TOKENS,
-    OLLAMA_BASE_URL,
-    OLLAMA_REASONING_EFFORT,
     TEMPERATURE,
 )
 
 
-import os
-
 @lru_cache(maxsize=1)
-def _get_client() -> OpenAI:
-    headers = {}
-    if "ngrok" in OLLAMA_BASE_URL:
-        headers["ngrok-skip-browser-warning"] = "true"
-    
-    # Allow API key to be passed via env variables, falling back to 'ollama'
-    api_key = (
-        os.getenv("LLM_API_KEY")
-        or os.getenv("OPENROUTER_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-        or "ollama"
-    )
-    
-    return OpenAI(
-        base_url=OLLAMA_BASE_URL,
-        api_key=api_key,
-        default_headers=headers,
-        timeout=LLM_TIMEOUT,
-        max_retries=1,
-    )
+def _get_client() -> genai.Client:
+    return genai.Client(api_key=GEMINI_API_KEY or None)
 
 
 def call_llm(prompt: str) -> str:
-    """Generate an answer with local Qwen3, raising actionable failures."""
+    """Generate an answer with Google Gemini, raising actionable failures."""
     if not prompt or not prompt.strip():
         raise ValueError("Prompt cannot be empty")
     try:
-        response = _get_client().chat.completions.create(
+        client = _get_client()
+        response = client.models.generate_content(
             model=LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            reasoning_effort=OLLAMA_REASONING_EFFORT,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=TEMPERATURE,
+                max_output_tokens=MAX_TOKENS,
+            ),
         )
     except Exception as exc:
         raise RuntimeError(
-            f"Ollama request failed at {OLLAMA_BASE_URL} using model "
-            f"'{LLM_MODEL}': {exc}. Confirm Ollama is running and execute "
-            f"'ollama pull {LLM_MODEL}'."
+            f"Gemini request failed using model '{LLM_MODEL}': {exc}"
         ) from exc
 
-    content = response.choices[0].message.content
+    content = response.text
     if not content or not content.strip():
-        raise RuntimeError(f"Ollama model '{LLM_MODEL}' returned an empty response")
+        raise RuntimeError(f"Gemini model '{LLM_MODEL}' returned an empty response")
     return content.strip()

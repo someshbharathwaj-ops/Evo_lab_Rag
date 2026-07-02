@@ -16,14 +16,25 @@ from config import (
 )
 
 
+import os
+
 @lru_cache(maxsize=1)
 def _get_client() -> OpenAI:
     headers = {}
     if "ngrok" in OLLAMA_BASE_URL:
         headers["ngrok-skip-browser-warning"] = "true"
+    
+    # Allow API key to be passed via env variables, falling back to 'ollama'
+    api_key = (
+        os.getenv("LLM_API_KEY")
+        or os.getenv("OPENROUTER_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or "ollama"
+    )
+    
     return OpenAI(
         base_url=OLLAMA_BASE_URL,
-        api_key="ollama",
+        api_key=api_key,
         default_headers=headers,
         timeout=LLM_TIMEOUT,
         max_retries=1,

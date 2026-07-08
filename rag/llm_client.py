@@ -15,9 +15,15 @@ from config import (
 
 @lru_cache(maxsize=1)
 def _get_client() -> openai.OpenAI:
+    headers = {}
+    if "ngrok" in OLLAMA_BASE_URL:
+        headers["ngrok-skip-browser-warning"] = "true"
     return openai.OpenAI(
         base_url=OLLAMA_BASE_URL,
         api_key="ollama",  # Placeholder required by the OpenAI interface
+        default_headers=headers,
+        timeout=120.0,
+        max_retries=2,
     )
 
 

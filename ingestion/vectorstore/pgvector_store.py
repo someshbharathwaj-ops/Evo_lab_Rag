@@ -86,22 +86,14 @@ def _get_connection() -> psycopg.Connection:
 
 
 def _stored_dimension(cur: psycopg.Cursor) -> int | None:
-    cur.execute(
-        """
-        SELECT format_type(a.atttypid, a.atttypmod)
-        FROM pg_attribute AS a
-        JOIN pg_class AS c ON c.oid = a.attrelid
-        JOIN pg_namespace AS n ON n.oid = c.relnamespace
-        WHERE n.nspname = %s AND c.relname = %s
-          AND a.attname = 'embedding' AND NOT a.attisdropped
-        """,
-        (SCHEMA, TABLE),
-    )
-    row = cur.fetchone()
-    if not row:
+    try:
+        cur.execute(
+            sql.SQL("SELECT array_length(embedding, 1) FROM {} LIMIT 1").format(_qualified_table())
+        )
+        row = cur.fetchone()
+        return row[0] if row and row[0] is not None else None
+    except Exception:
         return None
-    match = re.fullmatch(r"vector\((\d+)\)", row[0])
-    return int(match.group(1)) if match else None
 
 
 def create_table(embedding_dimension: int | None = None) -> None:
@@ -115,7 +107,6 @@ def create_table(embedding_dimension: int | None = None) -> None:
 
     try:
         with _connection() as conn, conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
             cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(SCHEMA)))
             cur.execute(
                 sql.SQL(
@@ -128,12 +119,12 @@ def create_table(embedding_dimension: int | None = None) -> None:
                         metadata JSONB NOT NULL DEFAULT '{{}}'::jsonb,
                         content_hash TEXT,
                         embedding_model TEXT NOT NULL DEFAULT '',
-                        embedding vector({}) NOT NULL,
+                        embedding real[] NOT NULL,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
                     )
                     """
-                ).format(_qualified_table(), sql.Literal(embedding_dimension))
+                ).format(_qualified_table())
             )
 
             # Upgrade the prototype's earlier table without discarding its data.
@@ -149,7 +140,7 @@ def create_table(embedding_dimension: int | None = None) -> None:
                 )
 
             stored_dimension = _stored_dimension(cur)
-            if stored_dimension != embedding_dimension:
+            if stored_dimension is not None and stored_dimension != embedding_dimension:
                 raise VectorStoreError(
                     f"Vector dimension mismatch for {SCHEMA}.{TABLE}: table uses "
                     f"{stored_dimension}, but '{EMBEDDING_MODEL}' produces "
@@ -160,12 +151,6 @@ def create_table(embedding_dimension: int | None = None) -> None:
                 sql.SQL("CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (content_hash)").format(
                     sql.Identifier(f"{TABLE}_content_hash_idx"), _qualified_table()
                 )
-            )
-            cur.execute(
-                sql.SQL(
-                    "CREATE INDEX IF NOT EXISTS {} ON {} USING hnsw "
-                    "(embedding vector_cosine_ops)"
-                ).format(sql.Identifier(f"{TABLE}_embedding_hnsw_idx"), _qualified_table())
             )
             cur.execute(
                 sql.SQL("CREATE INDEX IF NOT EXISTS {} ON {} USING gin (metadata)").format(
@@ -211,7 +196,7 @@ def insert_chunks(chunks: list[dict]) -> int:
         INSERT INTO {} (
             chunk_id, text, source, page, metadata, content_hash,
             embedding_model, embedding, updated_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::vector, now())
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::real[], now())
         ON CONFLICT (content_hash) DO UPDATE SET
             text = EXCLUDED.text,
             source = EXCLUDED.source,
@@ -234,7 +219,7 @@ def insert_chunks(chunks: list[dict]) -> int:
                 Jsonb(metadata),
                 _content_hash(chunk),
                 EMBEDDING_MODEL,
-                str(chunk["embedding"]),
+                chunk["embedding"],
             )
         )
 
@@ -261,28 +246,20 @@ def similarity_search(
         raise ValueError("top_k must be greater than zero")
     threshold = SCORE_THRESHOLD if score_threshold is None else score_threshold
 
-    filters = [sql.SQL("similarity >= %s")]
-    params: list[object] = [str(query_embedding)]
+    filters = []
+    params: list[object] = []
     if metadata_filter:
         filters.append(sql.SQL("metadata @> %s"))
-    params.append(threshold)
-    if metadata_filter:
         params.append(Jsonb(metadata_filter))
-    params.append(top_k)
 
+    where_clause = sql.SQL(" WHERE ").join(filters) if filters else sql.SQL("")
     statement = sql.SQL(
         """
-        SELECT chunk_id, text, source, page, metadata, similarity
-        FROM (
-            SELECT chunk_id, text, source, page, metadata,
-                   1 - (embedding <=> %s::vector) AS similarity
-            FROM {}
-        ) AS matches
-        WHERE {}
-        ORDER BY similarity DESC
-        LIMIT %s
+        SELECT chunk_id, text, source, page, metadata, embedding
+        FROM {}
+        {}
         """
-    ).format(_qualified_table(), sql.SQL(" AND ").join(filters))
+    ).format(_qualified_table(), where_clause)
 
     try:
         with _connection() as conn, conn.cursor() as cur:
@@ -293,19 +270,40 @@ def similarity_search(
             f"Vector table {SCHEMA}.{TABLE} does not exist. Run ingestion or db/schema.sql first."
         ) from exc
     except Exception as exc:
-        raise VectorStoreError(f"Similarity search failed: {exc}") from exc
+        raise VectorStoreError(f"Database query failed: {exc}") from exc
 
-    return [
-        {
-            "chunk_id": row[0],
-            "text": row[1],
-            "source": row[2],
-            "page": row[3],
-            "metadata": row[4] or {},
-            "similarity": float(row[5]),
-        }
-        for row in rows
-    ]
+    import numpy as np
+
+    results = []
+    q_vec = np.array(query_embedding, dtype=np.float32)
+    q_norm = np.linalg.norm(q_vec)
+
+    if q_norm == 0:
+        return []
+
+    for row in rows:
+        chunk_id, text, source, page, metadata, emb_list = row
+        if not emb_list:
+            continue
+        c_vec = np.array(emb_list, dtype=np.float32)
+        c_norm = np.linalg.norm(c_vec)
+        if c_norm == 0:
+            similarity = 0.0
+        else:
+            similarity = float(np.dot(q_vec, c_vec) / (q_norm * c_norm))
+
+        if similarity >= threshold:
+            results.append({
+                "chunk_id": chunk_id,
+                "text": text,
+                "source": source,
+                "page": page,
+                "metadata": metadata or {},
+                "similarity": similarity,
+            })
+
+    results.sort(key=lambda x: x["similarity"], reverse=True)
+    return results[:top_k]
 
 
 def count_chunks() -> int:
@@ -314,5 +312,7 @@ def count_chunks() -> int:
         with _connection() as conn, conn.cursor() as cur:
             cur.execute(sql.SQL("SELECT count(*) FROM {}").format(_qualified_table()))
             return int(cur.fetchone()[0])
+    except psycopg.errors.UndefinedTable:
+        return 0
     except Exception as exc:
         raise VectorStoreError(f"Could not count stored chunks: {exc}") from exc

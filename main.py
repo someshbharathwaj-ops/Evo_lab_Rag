@@ -1,10 +1,27 @@
+from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rag.rag_pipeline import run_rag
+from ingestion.vectorstore.pgvector_store import create_table
 
-app = FastAPI(title="Evo Lab RAG API")
+import threading
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Automatically initialize/migrate the database table in the background on startup
+    def init_db():
+        try:
+            create_table()
+            print("Database table initialized and verified in the background.", flush=True)
+        except Exception as exc:
+            print(f"Database initialization warning: {exc}", flush=True)
+
+    threading.Thread(target=init_db, daemon=True).start()
+    yield
+
+app = FastAPI(title="Evo Lab RAG API", lifespan=lifespan)
 
 # Enable CORS so frontend can call it directly if needed
 app.add_middleware(

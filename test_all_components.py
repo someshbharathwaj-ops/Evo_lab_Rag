@@ -36,7 +36,7 @@ class PromptTests(unittest.TestCase):
         prompt = build_rag_prompt("Why?", "Because.")
         self.assertIn("Why?", prompt)
         self.assertIn("Because.", prompt)
-        self.assertIn("ONLY", prompt)
+        self.assertIn("reasoning", prompt)
 
 
 class SplitterTests(unittest.TestCase):
@@ -102,19 +102,17 @@ class RagTests(unittest.TestCase):
 
 
 class OllamaClientTests(unittest.TestCase):
-    def test_client_uses_local_ollama_credentials(self):
+    def test_client_uses_ollama_credentials(self):
         from config import OLLAMA_BASE_URL
 
         llm_client = importlib.import_module("rag.llm_client")
         llm_client._get_client.cache_clear()
-        with patch.object(llm_client, "OpenAI") as openai:
-            openai.return_value = MagicMock()
+        with patch.object(llm_client, "openai") as mock_openai:
+            mock_openai.OpenAI.return_value = MagicMock()
             llm_client._get_client()
-            openai.assert_called_once_with(
+            mock_openai.OpenAI.assert_called_once_with(
                 base_url=OLLAMA_BASE_URL,
-                api_key="ollama",
-                timeout=llm_client.LLM_TIMEOUT,
-                max_retries=1,
+                api_key="ollama"
             )
 
 

@@ -96,6 +96,25 @@ def _stored_dimension(cur: psycopg.Cursor) -> int | None:
         return None
 
 
+def table_exists() -> bool:
+    """Check if the pgvector chunk table exists in the database."""
+    try:
+        with _connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = %s 
+                    AND table_name = %s
+                )
+                """,
+                (SCHEMA, TABLE),
+            )
+            return bool(cur.fetchone()[0])
+    except Exception:
+        return False
+
+
 def create_table(embedding_dimension: int | None = None) -> None:
     """Create/migrate the chunk table and validate its vector dimension."""
     if embedding_dimension is None:

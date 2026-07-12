@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any
 import argparse
 
-from config import CHUNKS_PATH
+from config import CHUNKS_PATH, DB_SCHEMA, DB_TABLE
 from ingestion.embeddings.embedding import embed_texts
 from ingestion.loaders.loaders import load_pdf
 from ingestion.splitters.splitters import token_based_splitter
-from ingestion.vectorstore.pgvector_store import insert_chunks
+from ingestion.vectorstore.pgvector_store import insert_chunks, table_exists
 
 
 def _write_debug_chunks(chunks: list[dict[str, Any]]) -> None:
@@ -33,6 +33,11 @@ def run_ingestion(pdf_path: str) -> list[dict[str, Any]]:
     """Ingest one PDF into pgvector and return chunks without embedding payloads."""
     if not os.path.isfile(pdf_path):
         raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+
+    if not table_exists():
+        print(f"[Database] Table '{DB_SCHEMA}.{DB_TABLE}' does not exist; it will be created during upload.")
+    else:
+        print(f"[Database] Table '{DB_SCHEMA}.{DB_TABLE}' exists; proceeding with ingestion.")
 
     print(f"[Ingestion] Loading PDF: {pdf_path}")
     documents = load_pdf(pdf_path)

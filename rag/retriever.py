@@ -36,10 +36,9 @@ def retrieve(
         "limit": limit,
     }
 
-    # Similarity expression using unnest to calculate dot product and magnitude database-side
+    # Native pgvector cosine similarity: 1 - (A <=> B)
     similarity_expr = sql.SQL(
-        "(SELECT SUM(q * e) FROM unnest(%(query_embedding)s::real[], embedding) AS x(q, e)) / "
-        "NULLIF(sqrt((SELECT SUM(e * e) FROM unnest(embedding) AS x(e))) * %(q_norm)s, 0)"
+        "1 - (embedding::vector <=> %(query_embedding)s::vector)"
     )
 
     filters = []

@@ -24,6 +24,7 @@ RAG_PROMPT = """You are a precise, expert AI assistant for an Evolutionary Compu
   $$formula$$
 - Examples: $f(x_i)$ for inline, $$p_i = \\frac{{f(x_i)}}{{\\sum_{{j=1}}^N f(x_j)}}$$ for block equations
 - Never write raw LaTeX without dollar-sign delimiters
+- NEVER use HTML tags like <sub> or <sup> for subscripts, superscripts, or mathematical formulas. Always use standard LaTeX notation inside single or double dollar signs (e.g., use $x_i$ instead of x<sub>i</sub>, and $p_i$ instead of p<sub>i</sub>).
 
 **Tables:**
 - Use markdown tables for comparisons: | Col1 | Col2 | with a separator row `|---|---|`

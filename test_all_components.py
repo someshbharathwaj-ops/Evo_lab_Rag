@@ -36,7 +36,7 @@ class PromptTests(unittest.TestCase):
         prompt = build_rag_prompt("Why?", "Because.")
         self.assertIn("Why?", prompt)
         self.assertIn("Because.", prompt)
-        self.assertIn("reasoning", prompt)
+        self.assertIn("Formatting Rules", prompt)
 
 
 class SplitterTests(unittest.TestCase):
@@ -110,10 +110,37 @@ class OllamaClientTests(unittest.TestCase):
         with patch.object(llm_client, "openai") as mock_openai:
             mock_openai.OpenAI.return_value = MagicMock()
             llm_client._get_client()
-            mock_openai.OpenAI.assert_called_once_with(
-                base_url=OLLAMA_BASE_URL,
-                api_key="ollama"
-            )
+            
+            expected_kwargs = {
+                "base_url": OLLAMA_BASE_URL,
+                "api_key": "ollama"
+            }
+            if "ngrok" in OLLAMA_BASE_URL:
+                expected_kwargs["default_headers"] = {"ngrok-skip-browser-warning": "true"}
+                expected_kwargs["timeout"] = 120.0
+                expected_kwargs["max_retries"] = 2
+                
+            mock_openai.OpenAI.assert_called_once_with(**expected_kwargs)
+
+    def test_clean_html_math_converts_subscripts_and_superscripts(self):
+        from rag.llm_client import clean_html_math
+
+        self.assertEqual(
+            clean_html_math("where x<sub>i</sub> represents"),
+            "where $x_{i}$ represents"
+        )
+        self.assertEqual(
+            clean_html_math("where p<sub>i</sub> is the"),
+            "where $p_{i}$ is the"
+        )
+        self.assertEqual(
+            clean_html_math("f(x<sub>i</sub>) is the"),
+            "$f(x_{i})$ is the"
+        )
+        self.assertEqual(
+            clean_html_math("x<sup>2</sup> + y<sup>2</sup> = z<sup>2</sup>"),
+            "$x^{2}$ + $y^{2}$ = $z^{2}$"
+        )
 
 
 if __name__ == "__main__":

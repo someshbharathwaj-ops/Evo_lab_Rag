@@ -12,6 +12,8 @@ from config import EMBEDDING_BATCH_SIZE, EMBEDDING_MODEL
 # Toggle fallback manually or fallback automatically if import/load fails
 USE_HF_INFERENCE = os.getenv("USE_HF_INFERENCE", "false").lower() == "true"
 
+_session = requests.Session()
+
 
 @lru_cache(maxsize=1)
 def _get_local_model():
@@ -32,7 +34,7 @@ def _embed_hf_api(text: str) -> list[float]:
         headers["Authorization"] = f"Bearer {hf_token}"
         
     try:
-        response = requests.post(api_url, headers=headers, json={"inputs": text}, timeout=15)
+        response = _session.post(api_url, headers=headers, json={"inputs": text}, timeout=15)
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list) and len(result) > 0:
@@ -54,7 +56,7 @@ def _embed_texts_hf_api(texts: Sequence[str]) -> list[list[float]]:
         headers["Authorization"] = f"Bearer {hf_token}"
         
     try:
-        response = requests.post(api_url, headers=headers, json={"inputs": list(texts)}, timeout=30)
+        response = _session.post(api_url, headers=headers, json={"inputs": list(texts)}, timeout=30)
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list):

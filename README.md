@@ -147,3 +147,30 @@ All supported settings are documented in `.env.example`. The main values are:
 - Ingestion is synchronous and intended for local/small-batch use.
 - There is no reranker; quality relies on normalized embeddings, cosine search,
   top-k, thresholding, metadata filters, and context deduplication.
+
+## Production Deployment
+
+This RAG application is fully production-ready for automated hosting platforms:
+
+### Backend Deployment (Render)
+
+1. Create a new **Web Service** on Render linked to this repository.
+2. Set the **Root Directory** to `Evo_lab_Rag`.
+3. Set the **Build Command** to `pip install -r requirements.txt`.
+4. Set the **Start Command** to `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+5. Add the following **Environment Variables** under your Render Service Settings:
+   - `DATABASE_URL`: Your Supabase PostgreSQL database URL.
+   - `OLLAMA_BASE_URL`: The OpenAI-compatible API base URL (e.g. ngrok tunnel or hosted instance).
+   - `LLM_MODEL`: The target LLM model name (e.g., `gemma3:4b`).
+   - `USE_HF_INFERENCE`: Set to `true` to use the Hugging Face Inference API fallback for sentence embedding (highly recommended on Render's free tier to avoid Out-Of-Memory limits).
+   - `HUGGINGFACE_API_KEY`: (Optional) Your Hugging Face user access token.
+
+### Frontend Deployment (Vercel)
+
+1. Import the repository into your Vercel dashboard.
+2. Configure the project to build from the `RAG-evolab-UI` directory.
+3. Vercel will automatically auto-configure the build command (`npm run build`).
+4. Set the following **Environment Variables** on the Vercel project settings:
+   - `NEXT_PUBLIC_API_URL` or `NEXT_PUBLIC_BACKEND_URL`: Point to your production FastAPI Backend URL hosted on Render (e.g., `https://evo-lab-rag-backend.onrender.com`).
+   - `BACKEND_TIMEOUT_MS`: Request timeout length in milliseconds (defaults to `120000`).
+

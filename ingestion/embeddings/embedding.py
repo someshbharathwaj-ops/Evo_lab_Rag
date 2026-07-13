@@ -66,8 +66,26 @@ def _embed_texts_hf_api(texts: Sequence[str]) -> list[list[float]]:
         raise RuntimeError(f"Hugging Face Inference API batch query failed: {e}") from e
 
 
+@lru_cache(maxsize=1)
+def _get_embedding_client():
+    from config import EMBEDDING_BASE_URL, EMBEDDING_API_KEY
+    import openai
+    return openai.OpenAI(
+        base_url=EMBEDDING_BASE_URL,
+        api_key=EMBEDDING_API_KEY,
+        timeout=30.0,
+    )
+
+
 def get_embedding_dimension() -> int:
     """Read the actual output dimension from the configured model."""
+    from config import EMBEDDING_API_KEY
+    if EMBEDDING_API_KEY:
+        try:
+            return len(embed_text("dimension probe"))
+        except Exception as exc:
+            print(f"[Embedding] Failed to probe dimension via API: {exc}")
+
     if not USE_HF_INFERENCE:
         try:
             model = _get_local_model()
@@ -82,10 +100,27 @@ def get_embedding_dimension() -> int:
 def embed_text(text: str) -> list[float]:
     if not text or not text.strip():
         raise ValueError("Cannot embed empty text")
-        
+
+    from config import EMBEDDING_API_KEY, EMBEDDING_MODEL
+    if EMBEDDING_API_KEY:
+        try:
+            client = _get_embedding_client()
+            extra_body = {}
+            if "nvidia.com" in client.base_url.host:
+                extra_body["input_type"] = "query"
+
+            response = client.embeddings.create(
+                model=EMBEDDING_MODEL,
+                input=[text],
+                extra_body=extra_body if extra_body else None,
+            )
+            return response.data[0].embedding
+        except Exception as exc:
+            raise RuntimeError(f"NVIDIA/OpenAI embedding failed: {exc}") from exc
+
     if USE_HF_INFERENCE:
         return _embed_hf_api(text)
-        
+
     try:
         model = _get_local_model()
         embedding = model.encode(text, normalize_embeddings=True)
@@ -101,10 +136,27 @@ def embed_texts(texts: Sequence[str]) -> list[list[float]]:
         return []
     if any(not text or not text.strip() for text in texts):
         raise ValueError("Cannot embed empty text")
-        
+
+    from config import EMBEDDING_API_KEY, EMBEDDING_MODEL
+    if EMBEDDING_API_KEY:
+        try:
+            client = _get_embedding_client()
+            extra_body = {}
+            if "nvidia.com" in client.base_url.host:
+                extra_body["input_type"] = "passage"
+
+            response = client.embeddings.create(
+                model=EMBEDDING_MODEL,
+                input=list(texts),
+                extra_body=extra_body if extra_body else None,
+            )
+            return [d.embedding for d in response.data]
+        except Exception as exc:
+            raise RuntimeError(f"NVIDIA/OpenAI batch embedding failed: {exc}") from exc
+
     if USE_HF_INFERENCE:
         return _embed_texts_hf_api(texts)
-        
+
     try:
         model = _get_local_model()
         embeddings = model.encode(

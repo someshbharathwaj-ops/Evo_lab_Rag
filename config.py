@@ -37,6 +37,8 @@ OLLAMA_NUM_CTX = _get_int("OLLAMA_NUM_CTX", 16384)
 # Keep the project's existing embedding model. Its dimension is detected at runtime.
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
 EMBEDDING_BATCH_SIZE = _get_int("EMBEDDING_BATCH_SIZE", 32)
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
+EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
 
 CHUNK_SIZE = _get_int("CHUNK_SIZE", 800)
 CHUNK_OVERLAP = _get_int("CHUNK_OVERLAP", 200)

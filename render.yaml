@@ -12,3 +12,5 @@ services:
         sync: false
       - key: LLM_MODEL
         sync: false
+      - key: USE_HF_INFERENCE
+        value: "true"

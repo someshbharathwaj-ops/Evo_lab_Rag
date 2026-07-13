@@ -145,12 +145,19 @@ def embed_texts(texts: Sequence[str]) -> list[list[float]]:
             if "nvidia.com" in client.base_url.host:
                 extra_body["input_type"] = "passage"
 
-            response = client.embeddings.create(
-                model=EMBEDDING_MODEL,
-                input=list(texts),
-                extra_body=extra_body if extra_body else None,
-            )
-            return [d.embedding for d in response.data]
+            # Batch in chunks of 100 to prevent API timeouts and payload limits
+            batch_size = 100
+            results = []
+            texts_list = list(texts)
+            for i in range(0, len(texts_list), batch_size):
+                batch = texts_list[i : i + batch_size]
+                response = client.embeddings.create(
+                    model=EMBEDDING_MODEL,
+                    input=batch,
+                    extra_body=extra_body if extra_body else None,
+                )
+                results.extend([d.embedding for d in response.data])
+            return results
         except Exception as exc:
             raise RuntimeError(f"NVIDIA/OpenAI batch embedding failed: {exc}") from exc
 

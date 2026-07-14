@@ -83,6 +83,30 @@ def query_endpoint(request: QueryRequest):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+@app.get("/debug-env")
+def debug_env():
+    import os
+    from config import (
+        EMBEDDING_BASE_URL,
+        EMBEDDING_MODEL,
+        DB_HOST,
+        DB_NAME,
+        LLM_MODEL,
+        OLLAMA_BASE_URL
+    )
+    return {
+        "EMBEDDING_BASE_URL": EMBEDDING_BASE_URL,
+        "EMBEDDING_MODEL": EMBEDDING_MODEL,
+        "DB_HOST": DB_HOST,
+        "DB_NAME": DB_NAME,
+        "LLM_MODEL": LLM_MODEL,
+        "OLLAMA_BASE_URL": OLLAMA_BASE_URL,
+        "HAS_EMBEDDING_API_KEY": bool(os.getenv("EMBEDDING_API_KEY")),
+        "EMBEDDING_API_KEY_LEN": len(os.getenv("EMBEDDING_API_KEY", "")),
+        "HAS_LLM_API_KEY": bool(os.getenv("LLM_API_KEY")),
+        "LLM_API_KEY_LEN": len(os.getenv("LLM_API_KEY", "")),
+    }
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

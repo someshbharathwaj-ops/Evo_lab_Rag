@@ -9,8 +9,16 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: OLLAMA_BASE_URL
-        sync: false
+        value: "https://integrate.api.nvidia.com/v1"
       - key: LLM_MODEL
+        value: "qwen/qwen3.5-122b-a10b"
+      - key: LLM_API_KEY
         sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_BASE_URL
+        value: "https://integrate.api.nvidia.com/v1"
+      - key: EMBEDDING_MODEL
+        value: "nvidia/nv-embedcode-7b-v1"
       - key: USE_HF_INFERENCE
-        value: "true"
+        value: "false"

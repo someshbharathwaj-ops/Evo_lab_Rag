@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: evo-lab-rag-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: USE_HF_INFERENCE
+        value: "true"
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: API_KEYS
+        sync: false

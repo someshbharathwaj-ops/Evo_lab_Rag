@@ -7,3 +7,5 @@ venv/
 .vscode/
 *.log
 *.pdf
+data/chunks/
+diagnostics_reports/

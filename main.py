@@ -10,13 +10,14 @@ import threading
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Sequential startup initialization of database schema and model loading
-    print("[Startup] Initializing database and embedding configurations...", flush=True)
+    # Pass embedding dimension explicitly to avoid loading the local model at startup.
+    # BAAI/bge-base-en-v1.5 always produces 768-dimensional vectors.
+    print("[Startup] Initializing database schema...", flush=True)
     try:
-        create_table()
-        print("[Startup] Database table and embedding model initialized successfully.", flush=True)
+        create_table(embedding_dimension=768)
+        print("[Startup] Database table initialized successfully.", flush=True)
     except Exception as exc:
-        print(f"[Startup] Warning during database/model initialization: {exc}", flush=True)
+        print(f"[Startup] Warning during database initialization: {exc}", flush=True)
     yield
 
 app = FastAPI(title="Evo Lab RAG API", lifespan=lifespan)

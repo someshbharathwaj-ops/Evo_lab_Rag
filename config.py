@@ -24,18 +24,18 @@ def _get_float(name: str, default: float) -> float:
         raise ValueError(f"{name} must be a number") from exc
 
 
-# Local Ollama exposes an OpenAI-compatible API. No external API key is used.
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen3")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "ollama")
+# NVIDIA API / OpenAI-compatible API configuration.
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen/qwen3.5-122b-a10b")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 MAX_TOKENS = _get_int("MAX_TOKENS", 800)
 TEMPERATURE = _get_float("TEMPERATURE", 0.0)
 LLM_TIMEOUT = _get_float("LLM_TIMEOUT", 120.0)
 OLLAMA_REASONING_EFFORT = os.getenv("OLLAMA_REASONING_EFFORT", "none")
 OLLAMA_NUM_CTX = _get_int("OLLAMA_NUM_CTX", 16384)
 
-# Keep the project's existing embedding model. Its dimension is detected at runtime.
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
+# NVIDIA embedding model configuration.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nvidia/nv-embedcode-7b-v1")
 EMBEDDING_BATCH_SIZE = _get_int("EMBEDDING_BATCH_SIZE", 32)
 EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
 EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")

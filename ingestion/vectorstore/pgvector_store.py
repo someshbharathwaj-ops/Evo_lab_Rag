@@ -126,6 +126,7 @@ def create_table(embedding_dimension: int | None = None) -> None:
 
     try:
         with _connection() as conn, conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(SCHEMA)))
             cur.execute(
                 sql.SQL(

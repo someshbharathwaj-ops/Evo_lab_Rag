@@ -136,7 +136,7 @@ class TestPipeline(unittest.TestCase):
     def test_pipeline_no_chunks(self, mock_retrieve):
         mock_retrieve.return_value = []
         res = run_pipeline("Unknown query")
-        self.assertEqual(res.answer, NO_CONTEXT_ANSWER)
+        self.assertIn("Information Not Present", res.answer)
         self.assertEqual(res.sources, [])
 
     @patch("rag.pipeline.ENABLE_JUDGE", True)

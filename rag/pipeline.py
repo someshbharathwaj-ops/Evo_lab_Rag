@@ -42,7 +42,7 @@ from config import (
     TOP_K,
 )
 from rag.llm_client import call_llm
-from rag.prompts import build_context, build_rag_prompt
+from rag.prompts import build_context, build_no_context_answer, build_rag_prompt
 from rag.retriever import retrieve
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ def run_pipeline(
     if not query or not query.strip():
         raise ValueError("Query cannot be empty")
 
-    result = PipelineResult(answer=NO_CONTEXT_ANSWER)
+    result = PipelineResult(answer=build_no_context_answer(query))
 
     # ------------------------------------------------------------------
     # Step 1: Retrieve
@@ -121,6 +121,7 @@ def run_pipeline(
 
     if not chunks:
         logger.info("[Pipeline] No chunks retrieved — returning no-context answer")
+        result.answer = build_no_context_answer(query)
         return result
 
     # ------------------------------------------------------------------
@@ -179,6 +180,7 @@ def run_pipeline(
     context = build_context(final_chunks)
     if not context.strip():
         logger.info("[Pipeline] Context is empty after dedup — returning no-context answer")
+        result.answer = build_no_context_answer(query)
         return result
 
     # ------------------------------------------------------------------

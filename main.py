@@ -60,8 +60,8 @@ def query_endpoint(request: QueryRequest):
 
         result = run_pipeline(query=request.query.strip())
 
-        if not result.answer or result.answer == NO_CONTEXT_ANSWER:
-            return QueryResponse(response=NO_CONTEXT_ANSWER, sources=[])
+        if not result.answer:
+            return QueryResponse(response=result.answer or NO_CONTEXT_ANSWER, sources=[])
 
         # Deduplicate sources from pipeline result
         unique_sources = []

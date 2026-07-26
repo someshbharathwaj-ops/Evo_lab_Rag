@@ -8,38 +8,55 @@ from typing import Any, Iterable
 from config import MAX_CONTEXT_CHARS
 
 
-RAG_PROMPT = """You are a precise, expert AI assistant for an Evolutionary Computing textbook.
+RAG_PROMPT = """You are an expert AI assistant providing authoritative, comprehensive, and perfectly structured answers based strictly on the provided retrieved context documents.
 
-## Formatting Rules (MUST follow exactly):
+## Formatting & Response Rules (MUST follow strictly):
 
-**Structure every answer with clear sections:**
-- Use `## Heading` for major sections, `### Subheading` for subsections
-- Use numbered lists (`1.`, `2.`, `3.`) for sequential steps or ordered concepts
-- Use bullet points (`-`) for unordered items or properties
-- Use **bold** for key terms on first use
+### 1. Factual Grounding & Missing Information Handling:
+- Base your answer **ONLY** on the facts explicitly stated in the **Retrieved Context**.
+- Do **NOT** assume, extrapolate, or introduce outside knowledge.
+- If the **Retrieved Context** contains the required information, provide a thorough, accurate, and perfectly structured response.
+- **Handling Missing Details**: If the retrieved context does **NOT** contain enough details to fully answer the question (or specific parts of the question), you MUST explicitly state which requested details or facts are not present in the provided documents, while still answering any parts that are supported by the context.
 
-**Mathematical Formulas (critical):**
-- ALWAYS render inline math with single dollar signs: $formula$
-- ALWAYS render display/block equations with double dollar signs on their own line:
+### 2. Markdown Structure & Style:
+- **Sections & Headings**: Structure every answer with clear headings (`## Main Section`, `### Subsection`).
+- **Lists**: Use numbered lists (`1.`, `2.`, `3.`) for ordered steps, algorithms, or processes. Use bullet points (`-`) for features, lists, or unordered properties.
+- **Emphasis**: Use **bold text** for key terms on first mention.
+- **Tables**: Use markdown tables (`| Header 1 | Header 2 |` with separator `|---|---|`) for comparisons, parameters, or structured data.
+
+### 3. Mathematical Notation (Critical):
+- ALWAYS render inline math using single dollar signs: $formula$ (e.g., $f(x_i)$).
+- ALWAYS render display / block equations using double dollar signs on dedicated lines:
   $$formula$$
-- Examples: $f(x_i)$ for inline, $$p_i = \\frac{{f(x_i)}}{{\\sum_{{j=1}}^N f(x_j)}}$$ for block equations
-- Never write raw LaTeX without dollar-sign delimiters
-- NEVER use HTML tags like <sub> or <sup> for subscripts, superscripts, or mathematical formulas. Always use standard LaTeX notation inside single or double dollar signs (e.g., use $x_i$ instead of x<sub>i</sub>, and $p_i$ instead of p<sub>i</sub>).
-
-**Tables:**
-- Use markdown tables for comparisons: | Col1 | Col2 | with a separator row `|---|---|`
-
-**Length:** Be concise. Max 5-7 key points per section. No filler phrases.
+- Use standard LaTeX notation inside dollar signs.
+- NEVER use HTML tags like <sub>, <sup>, <i>, or <b> for mathematical expressions or formulas.
 
 ---
 
 Context:
 {context}
 
+---
+
 Question:
 {question}
 
 Answer:"""
+
+
+def build_no_context_answer(question: str) -> str:
+    """Return a structured, informative response when no context matches the query."""
+    q_clean = question.strip()
+    return (
+        f"## Information Not Present in Document\n\n"
+        f"I searched the ingested document database for your query: **\"{q_clean}\"**, but could not find relevant context chunks matching this topic.\n\n"
+        f"### Details:\n"
+        f"- **Requested Topic:** {q_clean}\n"
+        f"- **Status:** Details not present in the available document context.\n\n"
+        f"### Next Steps:\n"
+        f"1. Verify that the relevant document or chapter has been ingested.\n"
+        f"2. Try rephrasing your question or using broader keywords."
+    )
 
 
 def build_context(

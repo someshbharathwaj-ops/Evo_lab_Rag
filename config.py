@@ -69,3 +69,24 @@ if TOP_K <= 0:
     raise ValueError("TOP_K must be greater than zero")
 if not -1.0 <= SCORE_THRESHOLD <= 1.0:
     raise ValueError("SCORE_THRESHOLD must be between -1 and 1")
+
+
+# ---------------------------------------------------------------------------
+# Retrieval reranking
+# Set RERANKER_MODEL to any HuggingFace cross-encoder model you want to use,
+# e.g. "cross-encoder/ms-marco-MiniLM-L-6-v2" or "BAAI/bge-reranker-v2-m3".
+# Leave empty to disable reranking regardless of ENABLE_RERANKING.
+# ---------------------------------------------------------------------------
+ENABLE_RERANKING: bool = os.getenv("ENABLE_RERANKING", "false").lower() == "true"
+RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "")          # user sets this
+RERANK_CANDIDATE_K: int = _get_int("RERANK_CANDIDATE_K", 35)   # fetch this many before reranking
+FINAL_TOP_K: int = _get_int("FINAL_TOP_K", 5)                  # keep this many after reranking
+
+# ---------------------------------------------------------------------------
+# LLM-as-a-Judge answer verification
+# JUDGE_MODEL defaults to LLM_MODEL if not set separately.
+# ---------------------------------------------------------------------------
+ENABLE_JUDGE: bool = os.getenv("ENABLE_JUDGE", "false").lower() == "true"
+JUDGE_MODEL: str = os.getenv("JUDGE_MODEL", "") or LLM_MODEL   # falls back to generator model
+JUDGE_MAX_TOKENS: int = _get_int("JUDGE_MAX_TOKENS", 1200)
+MAX_REGENERATE_ATTEMPTS: int = _get_int("MAX_REGENERATE_ATTEMPTS", 2)

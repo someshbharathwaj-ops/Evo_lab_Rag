@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from rag.rag_pipeline import run_rag
 from ingestion.vectorstore.pgvector_store import create_table
 
-import threading
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

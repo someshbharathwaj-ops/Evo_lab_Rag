@@ -55,31 +55,27 @@ def query_endpoint(request: QueryRequest):
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
     try:
-        from rag.retriever import retrieve
-        from rag.prompts import build_context, RAG_PROMPT
-        from rag.llm_client import call_llm
-        from rag.rag_pipeline import NO_CONTEXT_ANSWER
+        from rag.pipeline import run_pipeline, NO_CONTEXT_ANSWER
         import os
 
-        chunks = retrieve(request.query)
-        if not chunks:
+        result = run_pipeline(query=request.query.strip())
+
+        if not result.answer or result.answer == NO_CONTEXT_ANSWER:
             return QueryResponse(response=NO_CONTEXT_ANSWER, sources=[])
 
-        context = build_context(chunks)
-        answer = call_llm(RAG_PROMPT.format(context=context, question=request.query.strip()))
-
+        # Deduplicate sources from pipeline result
         unique_sources = []
-        seen = set()
-        for c in chunks:
-            src = c.get("source") or "unknown"
+        seen: set[tuple] = set()
+        for s in result.sources:
+            src = s.get("source") or "unknown"
             filename = os.path.basename(src)
-            pg = c.get("page")
+            pg = s.get("page")
             key = (filename, pg)
             if key not in seen:
                 seen.add(key)
                 unique_sources.append(SourceInfo(source=filename, page=pg))
 
-        return QueryResponse(response=answer, sources=unique_sources)
+        return QueryResponse(response=result.answer, sources=unique_sources)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

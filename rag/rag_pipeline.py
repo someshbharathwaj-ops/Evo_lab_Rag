@@ -1,31 +1,25 @@
-"""End-to-end retrieval-augmented answer generation."""
+"""End-to-end retrieval-augmented answer generation wrapper for backward compatibility."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from config import TOP_K
-from rag.llm_client import call_llm
-from rag.prompts import build_rag_prompt
-from rag.retriever import retrieve_context
-
-
-NO_CONTEXT_ANSWER = "I do not know based on the available documents."
+from rag.pipeline import NO_CONTEXT_ANSWER, run_pipeline
 
 
 def run_rag(
     query: str,
-    top_k: int = TOP_K,
+    top_k: int | None = None,
     metadata_filter: dict[str, Any] | None = None,
     score_threshold: float | None = None,
 ) -> str:
-    """Retrieve private context and return only the LLM-generated answer."""
-    context = retrieve_context(
-        query,
+    """Retrieve context and return LLM-generated answer using the full RAG pipeline."""
+    result = run_pipeline(
+        query=query,
         top_k=top_k,
         metadata_filter=metadata_filter,
         score_threshold=score_threshold,
     )
-    if not context:
-        return NO_CONTEXT_ANSWER
-    return call_llm(build_rag_prompt(query, context))
+    return result.answer
+

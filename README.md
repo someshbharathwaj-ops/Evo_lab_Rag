@@ -127,26 +127,59 @@ Run the offline unit suite (it mocks the model, database, and LLM):
 python test_all_components.py
 ```
 
-## Configuration
+## Advanced Multi-Stage RAG Pipeline
 
-All supported settings are documented in `.env.example`. The main values are:
+The RAG engine supports an optional multi-stage quality control pipeline:
 
-- `DATABASE_URL` (preferred) or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
-  `DB_PASSWORD`, and `DB_SSLMODE`.
-- `EMBEDDING_MODEL`, `EMBEDDING_BATCH_SIZE`.
-- `CHUNK_SIZE`, `CHUNK_OVERLAP`, `CHUNKS_PATH`.
-- `TOP_K`, `SCORE_THRESHOLD`, `MAX_CONTEXT_CHARS`.
-- `OLLAMA_BASE_URL`, `LLM_MODEL`, `MAX_TOKENS`, `TEMPERATURE`, `LLM_TIMEOUT`,
-  `OLLAMA_REASONING_EFFORT` (defaults to `none` for responsive grounded Q&A).
+```text
+User Query
+    ↓
+Embedding Search (Retrieval Top-K / Over-fetch Candidate-K)
+    ↓
+[Optional] Cross-Encoder Reranking (model-agnostic, e.g. RERANKER_MODEL in .env)
+    ↓
+Context Deduplication & Bounded Assembly
+    ↓
+Generator LLM (Candidate Answer Generation)
+    ↓
+[Optional] LLM-as-a-Judge Verification (Factual Grounding & Hallucination Check)
+    ↓
+[PASS] Final Answer / [FAIL] Corrective Regeneration
+```
+
+### Feature Flags & Configuration
+
+All advanced stages can be dynamically enabled or disabled via environment variables:
+
+| Setting | Default | Description |
+|---|---|---|
+| `ENABLE_RERANKING` | `false` | Enables cross-encoder reranking of retrieved candidates. |
+| `RERANKER_MODEL` | `""` | Any HuggingFace Cross-Encoder model ID (e.g. `cross-encoder/ms-marco-MiniLM-L-6-v2` or `BAAI/bge-reranker-v2-m3`). |
+| `RERANK_CANDIDATE_K` | `20` | Number of initial vector-similarity candidate chunks fetched for reranking. |
+| `FINAL_TOP_K` | `5` | Final top-N chunks selected after cross-encoder reranking. |
+| `ENABLE_JUDGE` | `false` | Enables LLM-as-a-Judge verification of generated candidate answers. |
+| `JUDGE_MODEL` | `LLM_MODEL` | LLM model used for judging correctness (defaults to generator model). |
+| `JUDGE_MAX_TOKENS` | `1200` | Token limit for judge structured JSON output. |
+| `MAX_REGENERATE_ATTEMPTS` | `2` | Maximum retry attempts if judge rejects an answer. |
+
+### Reranking Details
+
+When `ENABLE_RERANKING=true` and `RERANKER_MODEL` is set, the retriever over-fetches candidates (`RERANK_CANDIDATE_K=20`), and passes pairs of `(query, passage)` to the cross-encoder. The cross-encoder outputs deep semantic relevance scores, allowing fine-grained ranking beyond simple vector similarity.
+
+### LLM-as-a-Judge Verification
+
+When `ENABLE_JUDGE=true`, candidate answers are evaluated against the question and retrieved context for:
+- **Groundedness**: All claims must originate from retrieved text.
+- **No-Hallucination**: Rejects invented facts or unsupported assertions.
+- **Relevance & Completeness**: Ensures the prompt was actually answered.
+
+If the judge rejects an answer (`passed: false`), the pipeline automatically attempts regeneration using a corrective prompt containing the judge's feedback. If still unverified after max attempts, it returns the best available revised answer.
 
 ## Remaining limitations
 
-- Image-only/scanned PDFs need OCR before this text loader can ingest them.
-- Changing embedding models requires a new table or an explicit vector-column
-  migration and re-embedding; mixed dimensions are intentionally rejected.
+- Image-only/scanned PDFs need OCR (`pytesseract` + `Pillow`) or the image loader.
+- Changing embedding models requires a new table or an explicit vector-column migration and re-embedding; mixed dimensions are intentionally rejected.
 - Ingestion is synchronous and intended for local/small-batch use.
-- There is no reranker; quality relies on normalized embeddings, cosine search,
-  top-k, thresholding, metadata filters, and context deduplication.
 
 ## Production Deployment
 

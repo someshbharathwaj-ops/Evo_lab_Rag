@@ -117,6 +117,7 @@ class TestJudge(unittest.TestCase):
 
 
 class TestPipeline(unittest.TestCase):
+    @patch("rag.pipeline.ENABLE_RERANKING", False)
     @patch("rag.pipeline.retrieve")
     @patch("rag.pipeline.call_llm")
     def test_pipeline_basic_flow(self, mock_call_llm, mock_retrieve):
@@ -132,6 +133,7 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(res.sources[0]["source"], "doc1.pdf")
         self.assertEqual(res.sources[0]["page"], 2)
 
+    @patch("rag.pipeline.ENABLE_RERANKING", False)
     @patch("rag.pipeline.retrieve")
     def test_pipeline_no_chunks(self, mock_retrieve):
         mock_retrieve.return_value = []
@@ -139,6 +141,7 @@ class TestPipeline(unittest.TestCase):
         self.assertIn("Information Not Present", res.answer)
         self.assertEqual(res.sources, [])
 
+    @patch("rag.pipeline.ENABLE_RERANKING", False)
     @patch("rag.pipeline.ENABLE_JUDGE", True)
     @patch("rag.pipeline.MAX_REGENERATE_ATTEMPTS", 2)
     @patch("rag.pipeline.retrieve")

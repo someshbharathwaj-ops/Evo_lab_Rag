@@ -103,6 +103,19 @@ def debug_env():
         "LLM_API_KEY_LEN": len(os.getenv("LLM_API_KEY", "")),
     }
 
+@app.get("/clean-db")
+def clean_database():
+    try:
+        from ingestion.vectorstore.pgvector_store import delete_nan_chunks
+        deleted = delete_nan_chunks()
+        return {
+            "status": "success",
+            "deleted_rows": deleted,
+            "message": f"Cleaned up {deleted} invalid/NaN vector chunks from database",
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

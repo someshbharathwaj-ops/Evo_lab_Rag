@@ -74,7 +74,7 @@ if not -1.0 <= SCORE_THRESHOLD <= 1.0:
 # ---------------------------------------------------------------------------
 # Retrieval reranking
 # Set RERANKER_MODEL to any HuggingFace cross-encoder model you want to use,
-# e.g. "cross-encoder/ms-marco-MiniLM-L-6-v2" or "BAAI/bge-reranker-v2-m3".
+# e.g. "z-ai/glm" or "cross-encoder/ms-marco-MiniLM-L-6-v2".
 # Leave empty to disable reranking regardless of ENABLE_RERANKING.
 # ---------------------------------------------------------------------------
 ENABLE_RERANKING: bool = os.getenv("ENABLE_RERANKING", "false").lower() == "true"

@@ -8,9 +8,28 @@ import re
 from contextlib import contextmanager
 from typing import Iterator
 
+import math
 import psycopg
 from psycopg import sql
 from psycopg.types.json import Jsonb
+
+
+def _is_valid_text(text: Any) -> bool:
+    if not text or not isinstance(text, str):
+        return False
+    cleaned = text.strip().lower()
+    if not cleaned or cleaned in {"nan", "null", "none", "n/a", "undefined"}:
+        return False
+    return True
+
+
+def _is_valid_embedding(emb: Any) -> bool:
+    if not isinstance(emb, (list, tuple)) or len(emb) == 0:
+        return False
+    for x in emb:
+        if not isinstance(x, (int, float)) or math.isnan(x) or math.isinf(x):
+            return False
+    return True
 
 from config import (
     DATABASE_URL,
@@ -177,6 +196,8 @@ def create_table(embedding_dimension: int | None = None) -> None:
                     sql.Identifier(f"{TABLE}_metadata_idx"), _qualified_table()
                 )
             )
+            # Automatic post-initialization cleanup of any invalid or NaN records
+            delete_nan_chunks()
     except VectorStoreError:
         raise
     except Exception as exc:
@@ -185,6 +206,36 @@ def create_table(embedding_dimension: int | None = None) -> None:
             "On Supabase, run db/schema.sql in the SQL editor if this database "
             "role cannot create extensions."
         ) from exc
+
+
+def delete_nan_chunks() -> int:
+    """Delete rows from the pgvector database containing NULL, empty, or 'nan' text/embeddings."""
+    if not table_exists():
+        return 0
+    try:
+        with _connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                sql.SQL(
+                    """
+                    DELETE FROM {}
+                    WHERE text IS NULL
+                       OR trim(text) = ''
+                       OR lower(trim(text)) IN ('nan', 'null', 'none', 'n/a', 'undefined')
+                       OR chunk_id IS NULL
+                       OR lower(trim(chunk_id)) = 'nan'
+                       OR embedding IS NULL
+                       OR array_length(embedding, 1) IS NULL
+                       OR array_length(embedding, 1) = 0
+                    """
+                ).format(_qualified_table())
+            )
+            deleted = cur.rowcount
+            if deleted > 0:
+                print(f"[VectorStore] Cleaned up {deleted} NaN/NULL chunks from {SCHEMA}.{TABLE}.")
+            return deleted
+    except Exception as exc:
+        print(f"[VectorStore] Warning during NaN chunk cleanup: {exc}")
+        return 0
 
 
 def _content_hash(chunk: dict) -> str:
@@ -203,10 +254,19 @@ def insert_chunks(chunks: list[dict]) -> int:
     """Idempotently insert or update embedded chunks; return processed count."""
     if not chunks:
         return 0
-    dimension = len(chunks[0].get("embedding", []))
-    if not dimension:
-        raise ValueError("Every chunk must include a non-empty embedding")
-    for chunk in chunks:
+
+    # Filter out any invalid / NaN chunks before processing
+    valid_chunks = []
+    for c in chunks:
+        if _is_valid_text(c.get("text")) and _is_valid_embedding(c.get("embedding")):
+            valid_chunks.append(c)
+
+    if not valid_chunks:
+        print("[VectorStore] No valid non-NaN chunks to insert.")
+        return 0
+
+    dimension = len(valid_chunks[0].get("embedding", []))
+    for chunk in valid_chunks:
         if len(chunk.get("embedding", [])) != dimension:
             raise ValueError("All chunk embeddings must have the same dimension")
 
@@ -228,7 +288,7 @@ def insert_chunks(chunks: list[dict]) -> int:
         """
     ).format(_qualified_table())
     values = []
-    for chunk in chunks:
+    for chunk in valid_chunks:
         metadata = dict(chunk.get("metadata") or {})
         values.append(
             (

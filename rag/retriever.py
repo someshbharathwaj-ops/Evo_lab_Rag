@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import math
 from typing import Any
 import numpy as np
 from psycopg import sql
@@ -9,8 +11,10 @@ from psycopg.types.json import Jsonb
 
 from config import SCORE_THRESHOLD, TOP_K
 from ingestion.embeddings.embedding import embed_text
-from ingestion.vectorstore.pgvector_store import _connection, _qualified_table
+from ingestion.vectorstore.pgvector_store import _connection, _qualified_table, table_exists
 from rag.prompts import build_context
+
+logger = logging.getLogger(__name__)
 
 
 def retrieve(
@@ -22,12 +26,26 @@ def retrieve(
     """Return internal ranked matches for a query (not an end-user response)."""
     if not query or not query.strip():
         raise ValueError("Query cannot be empty")
+
+    if not table_exists():
+        logger.info("[Retriever] Vector table does not exist. Returning empty context.")
+        return []
+
     limit = TOP_K if top_k is None else top_k
     threshold = SCORE_THRESHOLD if score_threshold is None else score_threshold
 
-    query_embedding = embed_text(query)
+    try:
+        query_embedding = embed_text(query)
+    except Exception as exc:
+        logger.warning("[Retriever] Failed to generate query embedding (%s). Returning empty context.", exc)
+        return []
+
+    if not query_embedding or any(math.isnan(x) or math.isinf(x) for x in query_embedding):
+        logger.warning("[Retriever] Query embedding contains NaN or Inf. Returning empty context.")
+        return []
+
     q_norm = float(np.linalg.norm(query_embedding))
-    if q_norm == 0:
+    if q_norm == 0 or math.isnan(q_norm):
         return []
 
     params: dict[str, Any] = {
@@ -67,18 +85,26 @@ def retrieve(
     ).format(similarity_expr, _qualified_table(), where_clause)
 
     results = []
-    with _connection() as conn, conn.cursor() as cur:
-        cur.execute(statement, params)
-        for row in cur.fetchall():
-            chunk_id, text, source, page, metadata, similarity = row
-            results.append({
-                "chunk_id": chunk_id,
-                "text": text,
-                "source": source,
-                "page": page,
-                "metadata": metadata or {},
-                "similarity": float(similarity) if similarity is not None else 0.0,
-            })
+    try:
+        with _connection() as conn, conn.cursor() as cur:
+            cur.execute(statement, params)
+            for row in cur.fetchall():
+                chunk_id, text, source, page, metadata, similarity = row
+                # Filter out any individual returned row with invalid similarity
+                sim_val = float(similarity) if similarity is not None and not math.isnan(similarity) else 0.0
+                results.append({
+                    "chunk_id": chunk_id,
+                    "text": text,
+                    "source": source,
+                    "page": page,
+                    "metadata": metadata or {},
+                    "similarity": sim_val,
+                })
+    except Exception as exc:
+        logger.warning(
+            "[Retriever] Database vector query error (%s). Returning empty context.", exc
+        )
+        return []
 
     return results
 

@@ -154,7 +154,7 @@ All advanced stages can be dynamically enabled or disabled via environment varia
 | Setting | Default | Description |
 |---|---|---|
 | `ENABLE_RERANKING` | `false` | Enables cross-encoder reranking of retrieved candidates. |
-| `RERANKER_MODEL` | `""` | Any HuggingFace Cross-Encoder model ID (e.g. `z-ai/glm` or `cross-encoder/ms-marco-MiniLM-L-6-v2`). |
+| `RERANKER_MODEL` | `""` | Any HuggingFace Cross-Encoder model ID (e.g. `z-ai/glm-5.2` or `cross-encoder/ms-marco-MiniLM-L-6-v2`). |
 | `RERANK_CANDIDATE_K` | `20` | Number of initial vector-similarity candidate chunks fetched for reranking. |
 | `FINAL_TOP_K` | `5` | Final top-N chunks selected after cross-encoder reranking. |
 | `ENABLE_JUDGE` | `false` | Enables LLM-as-a-Judge verification of generated candidate answers. |

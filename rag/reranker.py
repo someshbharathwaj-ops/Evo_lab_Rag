@@ -9,7 +9,7 @@ To enable reranking, set in .env:
     RERANKER_MODEL=<any HuggingFace cross-encoder model>
 
 Examples of compatible models (user's choice):
-    z-ai/glm                                     # GLM reranker
+    z-ai/glm-5.2                                     # GLM reranker
     cross-encoder/ms-marco-MiniLM-L-6-v2        # fast, lightweight
     cross-encoder/ms-marco-MiniLM-L-12-v2       # balanced
     jinaai/jina-reranker-v2-base-multilingual    # multilingual
